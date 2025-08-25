@@ -47,5 +47,7 @@ public interface OpenAIService {
 
     String getAnswerUsingRagHybrid(String question);
 
+    void uploadDocument(MultipartFile file);
+
     // getAnswerUsingCustomChat(Question );
 }

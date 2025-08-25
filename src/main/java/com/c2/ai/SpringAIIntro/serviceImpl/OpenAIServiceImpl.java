@@ -24,6 +24,9 @@ import org.springframework.ai.openai.api.OpenAiAudioApi;
 import org.springframework.ai.openai.audio.speech.SpeechModel;
 import org.springframework.ai.openai.audio.speech.SpeechPrompt;
 import org.springframework.ai.openai.audio.speech.SpeechResponse;
+import org.springframework.ai.reader.tika.TikaDocumentReader;
+import org.springframework.ai.transformer.splitter.TextSplitter;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -379,6 +382,34 @@ public class OpenAIServiceImpl implements OpenAIService{
         return response.getResult().getOutput().getContent();
     }
 
+    @Override
+    public void uploadDocument(MultipartFile file) {
+        log.info("Uploading document: {}", file.getOriginalFilename());
+        try {
+            // 1. Read using TikaDocumentReader
+            TikaDocumentReader reader = new TikaDocumentReader(file.getResource());
+            List<Document> docs = reader.get();
+
+            // 2. Split into smaller chunks
+            TextSplitter splitter = new TokenTextSplitter();
+            List<Document> chunks = splitter.apply(docs);
+
+            // 3. Add to vector store
+            vectorStore.add(chunks);
+
+            // 4. (Optional, only for local file-based store)
+            if (vectorStoreProperties.getVectorStorePath() != null) {
+                vectorStore.save(new File(vectorStoreProperties.getVectorStorePath()));
+            }
+
+            log.info("Uploaded {} into vector store as {} chunks.",
+                    file.getOriginalFilename(), chunks.size());
+        } catch (Exception e) {
+            log.error("Error uploading document: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to upload document", e);
+        }
+    }
+
 
     private String askLLMDirect(String input, boolean withContext) {
         ChatResponse response = chatModel.call(new Prompt(input));
@@ -392,4 +423,5 @@ public class OpenAIServiceImpl implements OpenAIService{
         }
         return answer;
     }
+
 }

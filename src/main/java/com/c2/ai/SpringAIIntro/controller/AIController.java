@@ -15,8 +15,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @Slf4j
 @RestController
@@ -269,5 +272,13 @@ public class AIController {
     public String clearStore() {
         openAIService.clearVectorStore();
         return "Vector store cleared!";
+    }
+
+    @PostMapping("/uploadDocument")
+    public ResponseEntity<String> uploadDocument(@RequestParam("file") MultipartFile file) throws IOException {
+        // 1. Extract text with Tika
+
+        openAIService.uploadDocument(file);
+        return ResponseEntity.ok("Uploaded " + file.getOriginalFilename() + " successfully");
     }
 }
