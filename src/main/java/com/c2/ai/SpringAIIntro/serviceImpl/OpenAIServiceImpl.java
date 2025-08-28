@@ -43,7 +43,6 @@ import java.io.File;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -64,6 +63,9 @@ public class OpenAIServiceImpl implements OpenAIService{
 
     @Autowired
     SimpleVectorStore vectorStore;
+
+    //VectorStore vectorStore;
+
 
     @Value("classpath:templates/get-capital-prompt.st")
     private Resource getCapitalPrompt;
@@ -351,8 +353,9 @@ public class OpenAIServiceImpl implements OpenAIService{
 
     }
 
+    @Cacheable(value = "QACache", key = "#question")
     public String getAnswerUsingRagHybrid(String question) {
-        log.info("getAnswerUsingRagHybrid : Incoming question: {}", question);
+        log.info("Generating QA from openai. Cache Miss");
 
         // Try vector store retrieval
         List<Document> docs = vectorStore.similaritySearch(question);

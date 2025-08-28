@@ -150,6 +150,7 @@ public class AIController {
     )
     public String getAnswerUsingRag(@RequestParam String question) {
         //return openAIService.getAnswerUsingRag(question);
+        log.info("getAnswerUsingRagHybrid : Incoming question: {}", question);
         return openAIService.getAnswerUsingRagHybrid(question);
     }
 
