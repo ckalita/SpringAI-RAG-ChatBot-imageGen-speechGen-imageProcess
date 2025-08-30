@@ -1,0 +1,91 @@
+name: Render App Monitoring
+
+on:
+  schedule:
+    # Every 10 minutes from 08:00–23:59 IST (≈02:00–18:59 UTC)
+    - cron: "*/10 2-18 * * *"
+    # Daily report at 08:00 IST (02:30 UTC)
+    - cron: "30 2 * * *"
+    # Daily report at 00:30 IST (19:00 UTC previous day)
+    - cron: "30 19 * * *"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job do you want to run?"
+        required: true
+        default: "daily-report"
+        type: choice
+        options:
+          - keep-alive
+          - daily-report
+
+jobs:
+  keep-alive:
+    if: |
+      startsWith(github.event.schedule || '', '*/10') || 
+      github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'keep-alive'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Endpoints
+        id: ping
+        run: |
+          STATUS1=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            "https://springai-rag-chatbot-imagegen-speechgen-9i9g.onrender.com/ai/RAG/chatBotUsingRag?question=hi")
+
+          echo "status1=$STATUS1" >> $GITHUB_OUTPUT
+
+          if [ "$STATUS1" != "200" ] ; then
+            echo "failure=true" >> $GITHUB_OUTPUT
+          else
+            echo "failure=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Email if Failure
+        if: steps.ping.outputs.failure == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: "🚨 Render App Down Alert!"
+          to: "c2kalita85@gmail.com"
+          from: "GitHub Actions <${{ secrets.EMAIL_USER }}>"
+          body: |
+            Your Render app did not respond with 200.
+            AI Chat Status: ${{ steps.ping.outputs.status1 }}
+            Time (UTC): ${{ github.run_started_at }}
+
+  daily-report:
+    if: |
+      github.event.schedule == '30 2 * * *' || 
+      github.event.schedule == '30 19 * * *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'daily-report')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Endpoints (for report)
+        id: daily_ping
+        run: |
+          STATUS1=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            "https://springai-rag-chatbot-imagegen-speechgen-9i9g.onrender.com/ai/RAG/chatBotUsingRag?question=hi")
+
+          echo "status1=$STATUS1" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u)" >> $GITHUB_OUTPUT
+
+      - name: Send Daily Report Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: "✅ Render App Monitoring Report"
+          to: "c2kalita85@gmail.com"
+          from: "GitHub Actions <${{ secrets.EMAIL_USER }}>"
+          body: |
+            Monitoring check-in report:
+
+            Time (UTC): ${{ steps.daily_ping.outputs.timestamp }}
+            AI Chat:    ${{ steps.daily_ping.outputs.status1 }}
+
+            ✅ If it shows 200, your Render app was healthy at report time.
