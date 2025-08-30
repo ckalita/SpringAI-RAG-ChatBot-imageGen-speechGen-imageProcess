@@ -31,10 +31,12 @@ jobs:
         run: |
           STATUS1=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
             "https://springai-rag-chatbot-imagegen-speechgen-9i9g.onrender.com/ai/RAG/chatBotUsingRag?question=hi")
+          STATUS2=$(curl -s -o /dev/null -w "%{http_code}" https://springai-rag-chatbot-imagegen-speechgen-9i9g.onrender.com/actuator/health)
 
           echo "status1=$STATUS1" >> $GITHUB_OUTPUT
-
-          if [ "$STATUS1" != "200" ] ; then
+          echo "status2=$STATUS2" >> $GITHUB_OUTPUT
+          
+          if [ "$STATUS1" != "200" ] || [ "$STATUS2" != "200" ]; then
             echo "failure=true" >> $GITHUB_OUTPUT
           else
             echo "failure=false" >> $GITHUB_OUTPUT
@@ -68,8 +70,10 @@ jobs:
         run: |
           STATUS1=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
             "https://springai-rag-chatbot-imagegen-speechgen-9i9g.onrender.com/ai/RAG/chatBotUsingRag?question=hi")
-
+          STATUS2=$(curl -s -o /dev/null -w "%{http_code}" https://springai-rag-chatbot-imagegen-speechgen-9i9g.onrender.com/actuator/health)
+          
           echo "status1=$STATUS1" >> $GITHUB_OUTPUT
+          echo "status2=$STATUS2" >> $GITHUB_OUTPUT
           echo "timestamp=$(date -u)" >> $GITHUB_OUTPUT
 
       - name: Send Daily Report Email
@@ -86,6 +90,7 @@ jobs:
             Monitoring check-in report:
 
             Time (UTC): ${{ steps.daily_ping.outputs.timestamp }}
-            AI Chat:    ${{ steps.daily_ping.outputs.status1 }}
+            AI Chat status:    ${{ steps.daily_ping.outputs.status1 }}
+            Health Status: ${{ steps.daily_ping.outputs.status2 }}
 
             ✅ If it shows 200, your Render app was healthy at report time.
